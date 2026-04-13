@@ -1,0 +1,47 @@
+name: Deploy Observability Auto
+
+on:
+push:
+branches:
+- main
+
+jobs:
+deploy:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Install Azure CLI
+    run: |
+      curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+  - name: Login to Azure using ACR credentials
+    run: |
+      az login --username ${{ secrets.AZURE_CLIENT_ID }} \
+               --password ${{ secrets.AZURE_CLIENT_SECRET }}
+
+  - name: Set subscription
+    run: |
+      az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+  - name: Update Prometheus
+    run: |
+      az containerapp update \
+        --name prometheus \
+        --resource-group Omnicode-Arsw \
+        --image prom/prometheus:latest
+
+  - name: Update Grafana
+    run: |
+      az containerapp update \
+        --name grafana \
+        --resource-group Omnicode-Arsw \
+        --image grafana/grafana:latest
+
+  - name: Update Loki
+    run: |
+      az containerapp update \
+        --name loki \
+        --resource-group Omnicode-Arsw \
+        --image grafana/loki:latest
+```
