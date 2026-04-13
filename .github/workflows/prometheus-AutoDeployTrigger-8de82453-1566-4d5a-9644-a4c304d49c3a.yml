@@ -1,0 +1,49 @@
+name: Trigger auto deployment for prometheus
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/prometheus-AutoDeployTrigger-8de82453-1566-4d5a-9644-a4c304d49c3a.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.PROMETHEUS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PROMETHEUS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PROMETHEUS_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: netomnic0de.azurecr.io
+          registryUsername: ${{ secrets.PROMETHEUS_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.PROMETHEUS_REGISTRY_PASSWORD }}
+          containerAppName: prometheus
+          resourceGroup: Omnicode-Arsw
+          imageToBuild: netomnic0de.azurecr.io/prometheus:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
