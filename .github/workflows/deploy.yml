@@ -7,12 +7,6 @@ on:
       - 'grafana/**'
       - 'loki/**'
       - 'prometheus/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'grafana/**'
-      - 'loki/**'
-      - 'prometheus/**'
   workflow_dispatch:
 
 permissions:
@@ -22,7 +16,6 @@ permissions:
 jobs:
   # --- JOB PARA GRAFANA ---
   deploy-grafana:
-    if: contains(github.event.head_commit.modified, 'grafana/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,16 +30,17 @@ jobs:
       - name: Build and deploy Grafana
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}/grafana
-          dockerfilePath: Dockerfile 
+          appSourcePath: ${{ github.workspace }}
+          dockerfilePath: grafana/Dockerfile 
           registryUrl: netomnic0de.azurecr.io
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: grafana
           resourceGroup: Omnicode-Arsw
           imageToBuild: netomnic0de.azurecr.io/grafana:${{ github.sha }}
 
   # --- JOB PARA LOKI ---
   deploy-loki:
-    if: contains(github.event.head_commit.modified, 'loki/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,16 +55,17 @@ jobs:
       - name: Build and deploy Loki
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}/loki
-          dockerfilePath: Dockerfile 
+          appSourcePath: ${{ github.workspace }}
+          dockerfilePath: loki/Dockerfile 
           registryUrl: netomnic0de.azurecr.io
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: loki
           resourceGroup: Omnicode-Arsw
           imageToBuild: netomnic0de.azurecr.io/loki:${{ github.sha }}
 
   # --- JOB PARA PROMETHEUS ---
   deploy-prometheus:
-    if: contains(github.event.head_commit.modified, 'prometheus/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -85,9 +80,11 @@ jobs:
       - name: Build and deploy Prometheus
         uses: azure/container-apps-deploy-action@v2
         with:
-          appSourcePath: ${{ github.workspace }}/prometheus
-          dockerfilePath: Dockerfile 
+          appSourcePath: ${{ github.workspace }}
+          dockerfilePath: prometheus/Dockerfile
           registryUrl: netomnic0de.azurecr.io
+          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
           containerAppName: prometheus
           resourceGroup: Omnicode-Arsw
           imageToBuild: netomnic0de.azurecr.io/prometheus:${{ github.sha }}
