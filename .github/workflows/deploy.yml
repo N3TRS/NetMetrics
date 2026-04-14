@@ -55,10 +55,11 @@ jobs:
 
       - name: Deploy ${{ matrix.service }} to Container Apps
         run: |
-          az containerapp create \
+          az containerapp up \
             --name ${{ matrix.service }} \
             --resource-group Omnicode-Arsw \
             --environment observability-env \
             --image netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }} \
             --target-port ${{ matrix.port }} \
-            --ingress external
+            --ingress external \
+            --registry-server netomnic0de.azurecr.io
