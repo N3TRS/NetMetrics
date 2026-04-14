@@ -36,6 +36,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Set default subscription
+        run: az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Login to Azure Container Registry
         run: az acr login -n netomnic0de
 
@@ -46,6 +49,15 @@ jobs:
       - name: Push Docker image to ACR
         run: |
           docker push netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
+
+      - name: Configure ACR as external registry
+        run: |
+          az containerapp registry set \
+            --name ${{ matrix.service }} \
+            --resource-group Omnicode-Arsw \
+            --server netomnic0de.azurecr.io \
+            --username netomnic0de.azurecr.io \
+            --password ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Deploy ${{ matrix.service }} to Container Apps
         run: |
