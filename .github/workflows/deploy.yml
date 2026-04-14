@@ -12,6 +12,7 @@ on:
 env:
   RESOURCE_GROUP: omnicode-arsw
   ACR_NAME: NetOmniC0de
+  ACR_SERVER: netomnic0de.azurecr.io    
   ENVIRONMENT: observability-env
 
 jobs:
@@ -41,13 +42,13 @@ jobs:
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.ACR_NAME }}.azurecr.io
+          registry: ${{ env.ACR_SERVER }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
       - name: Build and push ${{ matrix.service }}
         run: |
-          IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
+          IMAGE="${{ env.ACR_SERVER }}/${{ matrix.service }}:${{ github.sha }}"
           docker build -t $IMAGE ./${{ matrix.service }}
           docker push $IMAGE
 
@@ -56,7 +57,7 @@ jobs:
 
       - name: Deploy ${{ matrix.service }}
         run: |
-          IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
+          IMAGE="${{ env.ACR_SERVER }}/${{ matrix.service }}:${{ github.sha }}"
 
           if az containerapp show \
                --name ${{ matrix.service }} \
@@ -77,9 +78,8 @@ jobs:
               --ingress ${{ matrix.ingress }} \
               --min-replicas 1 \
               --max-replicas 1 \
-              --registry-server ${{ env.ACR_NAME }}.azurecr.io \
-              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
-              --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
               --secrets "acr-password=${{ secrets.REGISTRY_PASSWORD }}" \
+              --registry-server ${{ env.ACR_SERVER }} \
+              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
               --registry-password secretref:acr-password
           fi
