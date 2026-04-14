@@ -2,15 +2,12 @@ version: '3.8'
 
 services:
   prometheus:
-    image: prom/prometheus:latest
+    build: ./prometheus
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -18,13 +15,12 @@ services:
       - observability
 
   grafana:
-    image: grafana/grafana:latest
+    build: ./grafana
     container_name: grafana
     ports:
       - "4000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
@@ -36,30 +32,16 @@ services:
       - loki
 
   loki:
-    image: grafana/loki:latest
+    build: ./loki
     container_name: loki
     ports:
       - "3100:3100"
     volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
       - loki-data:/loki
     command:
       - '-config.file=/etc/loki/local-config.yaml'
     networks:
       - observability
-
-  promtail:
-    image: grafana/promtail:latest
-    container_name: promtail
-    volumes:
-      - /var/lib/docker/containers:/var/lib/docker/containers
-      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
-    command:
-      - '-config.file=/etc/promtail/config.yml'
-    networks:
-      - observability
-    depends_on:
-      - loki
 
 volumes:
   prometheus-data:

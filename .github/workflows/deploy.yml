@@ -1,8 +1,8 @@
-name: Deploy Observability Stack 
+name: Deploy Observability Stack
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - 'grafana/**'
       - 'loki/**'
@@ -13,6 +13,11 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  RESOURCE_GROUP: omnicode-arsw
+  ACR_NAME: NetOmniC0de
+  ENVIRONMENT: observability-env
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -20,57 +25,61 @@ jobs:
       matrix:
         include:
           - service: grafana
-            client_id_secret: GRAFANA_AZURE_CLIENT_ID
             port: 3000
+            ingress: external
           - service: loki
-            client_id_secret: LOKI_AZURE_CLIENT_ID
             port: 3100
+            ingress: internal
           - service: prometheus
-            client_id_secret: PROMETHEUS_AZURE_CLIENT_ID
             port: 9090
-    
+            ingress: internal
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets[matrix.client_id_secret] }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build Docker image for ${{ matrix.service }}
-        run: |
-          docker build -t netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }} ./${{ matrix.service }}
+      - name: Login to ACR
+        run: az acr login --name ${{ env.ACR_NAME }}
 
-      - name: Push Docker image to ACR
+      - name: Build and push ${{ matrix.service }}
         run: |
-          docker push netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
+          IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
+          docker build -t $IMAGE ./${{ matrix.service }}
+          docker push $IMAGE
 
-      - name: Install Azure CLI Container Apps extension
+      - name: Install Container Apps extension
         run: az extension add --name containerapp --upgrade --allow-preview true
 
-      - name: Deploy ${{ matrix.service }} to Container Apps
+      - name: Deploy ${{ matrix.service }}
         run: |
-          IMAGE="netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
-          
-          if az containerapp show --name ${{ matrix.service }} --resource-group Omnicode-Arsw &>/dev/null; then
+          IMAGE="${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
+
+          if az containerapp show \
+               --name ${{ matrix.service }} \
+               --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
             echo "Updating existing Container App..."
             az containerapp update \
               --name ${{ matrix.service }} \
-              --resource-group Omnicode-Arsw \
-              --image $IMAGE \
-              --target-port ${{ matrix.port }}
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image $IMAGE
           else
             echo "Creating new Container App..."
             az containerapp create \
               --name ${{ matrix.service }} \
-              --resource-group Omnicode-Arsw \
-              --environment observability-env \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --environment ${{ env.ENVIRONMENT }} \
               --image $IMAGE \
               --target-port ${{ matrix.port }} \
-              --ingress external \
-              --registry-server netomnic0de.azurecr.io \
+              --ingress ${{ matrix.ingress }} \
+              --min-replicas 1 \
+              --max-replicas 1 \
+              --registry-server ${{ env.ACR_NAME }}.azurecr.io \
               --registry-username ${{ secrets.REGISTRY_USERNAME }} \
               --registry-password ${{ secrets.REGISTRY_PASSWORD }}
           fi
