@@ -47,12 +47,30 @@ jobs:
         run: |
           docker push netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
 
+      - name: Install Azure CLI Container Apps extension
+        run: az extension add --name containerapp --upgrade --allow-preview true
+
       - name: Deploy ${{ matrix.service }} to Container Apps
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          acrName: netomnic0de
-          imageToDeploy: netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
-          containerAppName: ${{ matrix.service }}
-          resourceGroup: Omnicode-Arsw
-          targetPort: ${{ matrix.port }}
-          ingress: external
+        run: |
+          IMAGE="netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}"
+          
+          if az containerapp show --name ${{ matrix.service }} --resource-group Omnicode-Arsw &>/dev/null; then
+            echo "Updating existing Container App..."
+            az containerapp update \
+              --name ${{ matrix.service }} \
+              --resource-group Omnicode-Arsw \
+              --image $IMAGE \
+              --target-port ${{ matrix.port }}
+          else
+            echo "Creating new Container App..."
+            az containerapp create \
+              --name ${{ matrix.service }} \
+              --resource-group Omnicode-Arsw \
+              --environment observability-env \
+              --image $IMAGE \
+              --target-port ${{ matrix.port }} \
+              --ingress external \
+              --registry-server netomnic0de.azurecr.io \
+              --registry-username ${{ secrets.REGISTRY_USERNAME }} \
+              --registry-password ${{ secrets.REGISTRY_PASSWORD }}
+          fi
