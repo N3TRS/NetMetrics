@@ -1,4 +1,4 @@
-name: Deploy Observability Stack (Unified)
+name: Deploy Observability Stack 
 
 on:
   push:
@@ -14,77 +14,36 @@ permissions:
   contents: read
 
 jobs:
-  # --- JOB PARA GRAFANA ---
-  deploy-grafana:
+  deploy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: grafana
+            client_id_secret: GRAFANA_AZURE_CLIENT_ID
+          - service: loki
+            client_id_secret: LOKI_AZURE_CLIENT_ID
+          - service: prometheus
+            client_id_secret: PROMETHEUS_AZURE_CLIENT_ID
+    
     steps:
       - uses: actions/checkout@v4
 
       - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.GRAFANA_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.GRAFANA_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.GRAFANA_AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets[matrix.client_id_secret] }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and deploy Grafana
+      - name: Build and deploy ${{ matrix.service }}
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          dockerfilePath: grafana/Dockerfile 
+          dockerfilePath: ${{ matrix.service }}/Dockerfile 
           registryUrl: netomnic0de.azurecr.io
           registryUsername: ${{ secrets.REGISTRY_USERNAME }}
           registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
-          containerAppName: grafana
+          containerAppName: ${{ matrix.service }}
           resourceGroup: Omnicode-Arsw
-          imageToBuild: netomnic0de.azurecr.io/grafana:${{ github.sha }}
-
-  # --- JOB PARA LOKI ---
-  deploy-loki:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.LOKI_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.LOKI_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.LOKI_AZURE_SUBSCRIPTION_ID }}
-
-      - name: Build and deploy Loki
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          appSourcePath: ${{ github.workspace }}
-          dockerfilePath: loki/Dockerfile 
-          registryUrl: netomnic0de.azurecr.io
-          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
-          containerAppName: loki
-          resourceGroup: Omnicode-Arsw
-          imageToBuild: netomnic0de.azurecr.io/loki:${{ github.sha }}
-
-  # --- JOB PARA PROMETHEUS ---
-  deploy-prometheus:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.PROMETHEUS_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.PROMETHEUS_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.PROMETHEUS_AZURE_SUBSCRIPTION_ID }}
-
-      - name: Build and deploy Prometheus
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          appSourcePath: ${{ github.workspace }}
-          dockerfilePath: prometheus/Dockerfile
-          registryUrl: netomnic0de.azurecr.io
-          registryUsername: ${{ secrets.REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.REGISTRY_PASSWORD }}
-          containerAppName: prometheus
-          resourceGroup: Omnicode-Arsw
-          imageToBuild: netomnic0de.azurecr.io/prometheus:${{ github.sha }}
+          imageToBuild: netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}

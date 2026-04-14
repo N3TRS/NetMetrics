@@ -1,2 +1,2 @@
 FROM grafana/grafana:latest
-COPY datasources.yml /etc/grafana/provisioning/datasources/datasources.yaml
+COPY grafana/datasources.yml /etc/grafana/provisioning/datasources/datasources.yaml
