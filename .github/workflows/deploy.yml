@@ -1,47 +1,91 @@
-name: Deploy Observability Auto
+name: Deploy Observability Stack (Unified)
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'grafana/**'
+      - 'loki/**'
+      - 'prometheus/**'
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+    paths:
+      - 'grafana/**'
+      - 'loki/**'
+      - 'prometheus/**'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  deploy:
+  # --- JOB PARA GRAFANA ---
+  deploy-grafana:
+    # Se ejecuta si hay cambios en la carpeta o si se activa manualmente
+    if: contains(github.event.head_commit.modified, 'grafana/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - name: Install Azure CLI
-        run: |
-          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+      - uses: actions/checkout@v4
 
-      - name: Login to Azure
-        run: |
-          az login --username ${{ secrets.AZURE_CLIENT_ID }} \
-                   --password ${{ secrets.AZURE_CLIENT_SECRET }}
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.GRAFANA_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.GRAFANA_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.GRAFANA_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Set subscription
-        run: |
-          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build and deploy Grafana
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/grafana
+          registryUrl: netomnic0de.azurecr.io
+          containerAppName: grafana
+          resourceGroup: Omnicode-Arsw
+          imageToBuild: netomnic0de.azurecr.io/grafana:${{ github.sha }}
 
-      - name: Update Prometheus
-        run: |
-          az containerapp update \
-            --name prometheus \
-            --resource-group Omnicode-Arsw \
-            --image prom/prometheus:latest
+  # --- JOB PARA LOKI ---
+  deploy-loki:
+    if: contains(github.event.head_commit.modified, 'loki/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Update Grafana
-        run: |
-          az containerapp update \
-            --name grafana \
-            --resource-group Omnicode-Arsw \
-            --image grafana/grafana:latest
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.LOKI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.LOKI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.LOKI_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Update Loki
-        run: |
-          az containerapp update \
-            --name loki \
-            --resource-group Omnicode-Arsw \
-            --image grafana/loki:latest
+      - name: Build and deploy Loki
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/loki
+          registryUrl: netomnic0de.azurecr.io
+          containerAppName: loki
+          resourceGroup: Omnicode-Arsw
+          imageToBuild: netomnic0de.azurecr.io/loki:${{ github.sha }}
+
+  # --- JOB PARA PROMETHEUS ---
+  deploy-prometheus:
+    if: contains(github.event.head_commit.modified, 'prometheus/') || github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.PROMETHEUS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PROMETHEUS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PROMETHEUS_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and deploy Prometheus
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}/prometheus
+          registryUrl: netomnic0de.azurecr.io
+          containerAppName: prometheus
+          resourceGroup: Omnicode-Arsw
+          imageToBuild: netomnic0de.azurecr.io/prometheus:${{ github.sha }}
