@@ -21,10 +21,13 @@ jobs:
         include:
           - service: grafana
             client_id_secret: GRAFANA_AZURE_CLIENT_ID
+            port: 3000
           - service: loki
             client_id_secret: LOKI_AZURE_CLIENT_ID
+            port: 3100
           - service: prometheus
             client_id_secret: PROMETHEUS_AZURE_CLIENT_ID
+            port: 9090
     
     steps:
       - uses: actions/checkout@v4
@@ -50,18 +53,12 @@ jobs:
         run: |
           docker push netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
 
-      - name: Configure ACR as external registry
-        run: |
-          az containerapp registry set \
-            --name ${{ matrix.service }} \
-            --resource-group Omnicode-Arsw \
-            --server netomnic0de.azurecr.io \
-            --username netomnic0de.azurecr.io \
-            --password ${{ secrets.REGISTRY_PASSWORD }}
-
       - name: Deploy ${{ matrix.service }} to Container Apps
         run: |
-          az containerapp update \
+          az containerapp create \
             --name ${{ matrix.service }} \
             --resource-group Omnicode-Arsw \
-            --image netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
+            --environment observability-env \
+            --image netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }} \
+            --target-port ${{ matrix.port }} \
+            --ingress external
