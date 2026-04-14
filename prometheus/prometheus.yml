@@ -6,35 +6,18 @@ scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-        labels:
-          service: 'prometheus'
 
   - job_name: 'grafana'
     static_configs:
       - targets: ['grafana:3000']
-        labels:
-          service: 'grafana'
 
-  - job_name: 'net-authentication'
+  - job_name: 'net-services'
+    metrics_path: '/metrics'
+    scheme: https
     static_configs:
-      - targets: ['host.docker.internal:3000']
-        labels:
-          service: 'net-authentication'
-
-  - job_name: 'net-calls'
-    static_configs:
-      - targets: ['host.docker.internal:3003']
-        labels:
-          service: 'net-calls'
-
-  - job_name: 'net-realtime'
-    static_configs:
-      - targets: ['host.docker.internal:3004']
-        labels:
-          service: 'net-realtime'
-
-  - job_name: 'net-session'
-    static_configs:
-      - targets: ['host.docker.internal:3002']
-        labels:
-          service: 'net-session'
+      - targets:
+          - 'omnicode-api-authentication.azurewebsites.net:443'
+          - 'omnicode-api-calls.azurewebsites.net:443'
+          - 'omnicode-api-real-time.azurewebsites.net:443'
+          - 'omnicode-api-session.azurewebsites.net:443'
+          - 'omnicode-api-orchestrator.azurewebsites.net:443'
