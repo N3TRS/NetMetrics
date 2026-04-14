@@ -48,8 +48,8 @@ jobs:
           docker push netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
 
       - name: Deploy ${{ matrix.service }} to Container Apps
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          containerImage: netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
-          containerAppName: ${{ matrix.service }}
-          resourceGroup: Omnicode-Arsw
+        run: |
+          az containerapp update \
+            --name ${{ matrix.service }} \
+            --resource-group Omnicode-Arsw \
+            --image netomnic0de.azurecr.io/${{ matrix.service }}:${{ github.sha }}
