@@ -79,5 +79,7 @@ jobs:
               --max-replicas 1 \
               --registry-server ${{ env.ACR_NAME }}.azurecr.io \
               --registry-username ${{ secrets.REGISTRY_USERNAME }} \
-              --registry-password ${{ secrets.REGISTRY_PASSWORD }}
+              --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
+              --secrets "acr-password=${{ secrets.REGISTRY_PASSWORD }}" \
+              --registry-password secretref:acr-password
           fi
