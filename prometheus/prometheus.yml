@@ -18,4 +18,4 @@ scrape_configs:
           - 'omnicode-api-calls.azurewebsites.net:443'
           - 'omnicode-api-real-time.azurewebsites.net:443'
           - 'omnicode-api-session.azurewebsites.net:443'
-          - 'omnicode-api-orchestrator.azurewebsites.net:443'
+          - 'omnicode-api-python.azurewebsites.net:443'
